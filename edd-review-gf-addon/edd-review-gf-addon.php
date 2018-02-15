@@ -18,7 +18,6 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *
  * @package	EDD_GF_Integration
  * @since	1.0
- * @version	1.0
  * @author 	Tyche Softwares
  */
 class EDD_GF_Integration {
@@ -32,7 +31,6 @@ class EDD_GF_Integration {
 	public function __construct() {
 		
 		add_action( 'gform_after_submission', 	array( $this, 'set_post_content' ), 10, 2 );
-		add_action( 'init', 					array( $this, 'dxt_eddreview_script' ) );
 		add_action( 'admin_enqueue_scripts',  	array( $this, 'tyche_edd_review_enqueue_scripts_js' ) );
 		add_action( 'edd_update_review'    ,  	array( $this, 'tyche_update_review_data' ) );
 	}
@@ -52,7 +50,6 @@ class EDD_GF_Integration {
 		$review_content = $entry['6']; // Body of Review
 		$comment_type   = 'edd_review'; // Comment Type
 		$comment_agent  = $entry['user_agent']; // User Agent
-
 		
 		/**
 		 * Getting Download ID for the plugin selected when submitting the review.
@@ -205,177 +202,7 @@ class EDD_GF_Integration {
 		$args['review_approved'] = $comment_allowed;		
 
 		update_post_meta( $comment_post_ID, 'edd_reviews_average_rating', EDD_Reviews::average_rating( false, $comment_post_ID ) );	
-	}
-
-	/**
-	 * Function to convert testimonial data to EDD Reviews
-	 *
-	 * @since 1.0
-	 */
-
-	public function dxt_eddreview_script(){	
-		
-		$status = get_option( 'convert_testimonial_to_review' );
-		
-		if ( !$status && $status != 'done' ) {
-			
-			$args = array( 
-	            'post_type'         => array( 'testimonial' ), 
-	            'posts_per_page'    => -1,
-	            'post_status'       => array( 'publish', 'pending', 'draft', 'auto-draft', 'future', 'private', 'inherit' )
-	        );
-	        
-	        $testimonial 			= get_posts( $args );
-	        $comment_type 			= "edd_review";
-	        $rating 				= 5;
-	    	$review_author_email  	= $review_author_url = "";
-	    	$comment_agent 			= $_SERVER['HTTP_USER_AGENT'];
-	    	$comment_author_ip 		= ":::1";
-	    	$user_id 				= '';
-
-	    	/**
-			 * Array to add dynamic string to for review title.
-			 */
-
-	    	$array_review_string 	= array(
-							    		'Great Plugin',
-							    		'Amazing Support',
-							    		'Superb WooCommerce Extension',
-							    		'Good plugin',
-							    		'Fantastic plugins and support',
-							    		'Fantastic support team',
-							    		'Great customer service',
-							    		'Highly recommended plugins'
-			    		 			   );
-
-	    	/**
-			 * Array to get download id based on category of review.
-			 * Key is Download ID and Value is Category Id of Testimonial.
-			 */
-
-	    	$list_of_all_categories = array( 
-							    		'22' 		=> '443',
-							    		'20' 		=> '444',
-							    		'16' 		=> '442',
-							    		'238877' 	=> '450',
-							    		/*'286317' 	=> '399', */
-							    		'132' 		=> '452', 
-							    		'238916' 	=> '451',
-							    		'207914'    => '445',
-							    		'302237' 	=> '459', // export
-							    		'302239' 	=> '453' // delivery notes
-						    		  );
-
-	    	/**
-			 * Array to get source based on category of review.
-			 */
-
-	    	$list_of_all_sources 	= array( 
-		    							'272' => '272', // fb
-							    		'276' => '276', // g+
-							    		'274' => '274', // twit
-							    		'394' => '394', // .org
-							    		'273' => '273', //review
-							    		'271' => '271' // testimonial
-						    		  );
-	    	
-	    	$comment_post_ID		= "";
-
-	    	$list_of_all_d_id 		= array( 
-	                                    '22' => '22', // bkap
-	                                    '16' => '16', // ordd
-	                                    '20' => '20' // ac
-                                  	  );
-
-	        foreach ( $testimonial as $key => $value ) {
-	        	
-	        	$review_author 		= $value->post_title;
-	        	$t_date	 			= $value->post_date;
-	        	$random_key 		= array_rand( $array_review_string );
-				$review_title 		= $array_review_string[ $random_key ];        	
-	        	$review_content 	= $value->post_content;
-	        	$category 			= get_the_terms( $value->ID, 'testimonial-category' );
-	        	$category_ids 		= array();
-	        	$matchedkey 		= '';
-	        	$source_key 		= '';
-	        	$floating   		= '';
-
-	        	if ( !empty( $category ) ) {
-	        		
-	        		foreach ( $category as $ckey => $cvalue ) {
-	        			array_push( $category_ids, $cvalue->term_id );
-	        			
-	        			if ( $matchedkey == '' ) {
-		        			if( in_array( $cvalue->term_id, $list_of_all_categories ) ) {
-		        				$comment_post_ID = array_search ( $cvalue->term_id, $list_of_all_categories );    				
-		        			}
-	        			}
-	        			if ( $source_key == '' ) {
-	        				if( in_array( $cvalue->term_id, $list_of_all_sources ) ) {
-		        				$source_key = array_search ( $cvalue->term_id, $list_of_all_sources );    				
-		        			}
-	        			}
-	        			if ( $floating == '' ) {
-                            if( $cvalue->term_id == 456 ) {
-                                $floating = 'on';                   
-                            }
-                        }       			
-	        		}
-	        	} else {
-	        		continue;
-	        	}
-	        	if ( $comment_post_ID == "" ) {                    
-                    $random_d_key         = array_rand( $list_of_all_d_id );
-                    $comment_post_ID     = $list_of_all_d_id[ $random_d_key ];
-                }
-	        	$args = apply_filters( 	'edd_reviews_insert_review_args', 
-	        								array(
-												'comment_post_ID'      => $comment_post_ID,
-												'comment_author'       => $review_author,
-												'comment_author_email' => $review_author_email,
-												'comment_author_url'   => $review_author_url,
-												'comment_content'      => $review_content,
-												'comment_type'         => $comment_type,
-												'comment_parent'       => '',
-												'comment_author_IP'    => $comment_author_ip,
-												'comment_agent'        => isset( $comment_agent ) ? substr( $comment_agent, 0, 254 ) : '',
-												'user_id'              => $user_id,
-												'comment_date'         => $t_date,
-												'comment_date_gmt'     => $t_date,
-												'comment_approved'     => 1
-											) 
-	        			);
-
-				$comment_allowed 	= wp_allow_comment( $args );
-				$args 				= apply_filters( 'preprocess_comment', $args );
-				$review_id 			= wp_insert_comment( wp_filter_comment( $args ) );
-				$img_url 			= "";
-
-				if ( get_the_post_thumbnail_url( $value->ID ) ) {
-					$img_url = get_the_post_thumbnail_url( $value->ID );
-				}
-
-				add_comment_meta( $review_id, 'edd_rating', $rating );
-				add_comment_meta( $review_id, 'edd_review_title', $review_title );
-				add_comment_meta( $review_id, 'edd_review_approved', $comment_allowed );
-				// Additional fields.
-				add_comment_meta( $review_id, 'edd_review_source', $source_key );
-				add_comment_meta( $review_id, 'edd_review_categories', $category_ids );
-				add_comment_meta( $review_id, 'edd_review_generic', $floating );
-				add_comment_meta( $review_id, 'edd_review_img_url', $img_url );
-				
-				// Add review metadata to the $args so it can be passed to the notification email
-				$args['id']              = $review_id;
-				$args['rating' ]         = $rating;
-				$args['review_title']    = $review_title;
-				$args['review_approved'] = $comment_allowed;		
-				
-				update_post_meta( $comment_post_ID, 'edd_reviews_average_rating', EDD_Reviews::average_rating( false, $comment_post_ID ) );
-			}	
-			
-			update_option( 'convert_testimonial_to_review', 'done' );	
-        }
-	}
+	}	
 
 	/**
 	 * This function will include the scrip file on the edit review page. 
